@@ -142,9 +142,8 @@ class Config:
             dict {local, {host, port, authentication}}
         """
 
-        if "machines" in self.conf and type(self.conf["machines"]) is dict:
-            if machine in self.conf["machines"]:
-                return self.conf["machines"][machine]
+        if "machines" in self.conf and type(self.conf["machines"]) is dict and machine in self.conf["machines"]:
+            return self.conf["machines"][machine]
 
         return {}
 

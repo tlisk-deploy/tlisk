@@ -30,6 +30,12 @@ class Destination:
     def is_valid(self) -> bool:
         return bool(self.conf.get_machine(self.destination["machine"]))
 
+    def get_kind(self) -> str:
+        if self.is_local():
+            return "local"
+
+        return self.destination["kind"] if "kind" in self.destination else "unknown"
+
     def get_remote_commands(self, timing: str) -> dict[str, list[str]]:
         """
         Gathers the list of commands and scripts that might be executed before or after deployment

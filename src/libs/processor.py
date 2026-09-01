@@ -48,7 +48,6 @@ class Processor:
             is_active = is_active + Style.RESET_ALL
 
             print(f"{Style.BRIGHT}{Fore.YELLOW}{bp}: {is_valid} {Fore.WHITE} || {is_active}")
-            print(f"{Style.BRIGHT}{Fore.BLUE} Kind: " + str(bps[bp]["kind"]) if bps[bp]["kind"] != "" else "fallback")
             if bps[bp]["description"] != "":
                 description: str = str(bps[bp]["description"])
                 print(f"{Style.DIM}{Fore.WHITE} # {Fore.MAGENTA}{description}")
@@ -58,8 +57,9 @@ class Processor:
             for dest in dests:
                 is_destination_valid: str = bright_green + "Valid" if dest.is_valid() else dim_red + "Not valid"
                 is_destination_valid = is_destination_valid + Style.RESET_ALL
+                kind: str = dest.get_kind()
                 machine_name: str = str(dest.get_machine())
-                print(f"{Style.BRIGHT}{Fore.WHITE}  > {machine_name} | " + is_destination_valid)
+                print(f"{Style.BRIGHT}{Fore.WHITE}  > {machine_name} ({kind}) | " + is_destination_valid)
 
             print(Style.RESET_ALL)
 

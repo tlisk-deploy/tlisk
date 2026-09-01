@@ -35,11 +35,14 @@ machines:
   remote1:
     hostname: 10.0.0.1
     authenticate: remote1
+    kind: sftp
 
   remote2:
     hostname: 10.0.0.2
     authenticate: sshkey
+    kind: sftp
 
   remote3:
     hostname: 10.0.0.3
     authenticate: sshkey
+    kind: sftp
