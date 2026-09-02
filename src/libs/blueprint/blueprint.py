@@ -1,5 +1,4 @@
-import os
-import tempfile
+from abc import ABC, abstractmethod
 from typing import Any
 
 from loguru import logger
@@ -9,203 +8,63 @@ from libs.config import Config
 from .destinations import Destinations
 
 
-class Blueprint:
-    """
-    Blueprint
-    """
-
+class Blueprint(ABC):
     name: str = ""
     bp: dict[str, Any] = {}
     valid: bool = False
     tmp_folder: str
     conf: Config
 
+    @abstractmethod
     def __init__(self, filename: str, bp: dict[str, Any], conf: Config) -> None:
-        self.name = os.path.splitext(filename)[0]
         self.conf = conf
         self.tmp_folder = ""
         self.bp = bp
 
-        # Check for validity of blueprint if it contains needed components
-        self.__check_valid()
-
-        # Misc postprocessing
-        self.__postprocessing()
-
-    def __check_valid(self) -> None:
-        """
-        Check validity of a blueprint
-        """
-        if "blueprint" not in self.bp:
-            logger.error(f"{self.name}: Blueprint is not wrapped in `blueprint` structure!")
-            return
-
-        if "deploy" not in self.bp["blueprint"]:
-            logger.error(f"{self.name}: Deploy is missing from the blueprint!")
-            return
-
-        dep = self.bp["blueprint"]["deploy"]
-        if "source" not in dep:
-            logger.error(f"{self.name}: `source` configuration is missing from the `deploy` section!")
-            return
-
-        if "folder" not in dep["source"] and "items" not in dep["source"]:
-            logger.error(f"{self.name}: `folder` or `items` not defined in `source`")
-            return
-
-        if "type" not in dep["source"]:
-            logger.error(f"{self.name}: `type` is not defined in `source`")
-            return
-
-        if "destinations" not in dep:
-            logger.error(f"{self.name}: `destination` configuration is missing from the `deploy` section!")
-            return
-
-        self.valid = True
-
-    def __postprocessing(self):
-        """
-        Misc. blueprint postprocessing
-        """
-        if self.valid:
-            # Bind authentication to a machine blueprint from master config file if available
-            for dest in self.bp["blueprint"]["deploy"]["destinations"]:
-                dest.update(self.conf.get_machine(dest["machine"]))
-
+    @abstractmethod
     def get_auth(self, auth_name: str, machine: str) -> dict[str, Any]:
-        auth_out: dict[str, Any] = {}
+        logger.warning("`is_active` should be properly initialized!")
 
-        auth = self.conf.get_auth(auth_name)
-        auth.update(self.conf.get_machine(machine))
-
-        if "error" in auth and auth["error"]:
-            self.valid = False
-            return {}
-
-        for key in ["username", "password", "hostname", "port"]:
-            if key in auth:
-                auth_out.update({key: auth[key]})
-
-        return auth_out
-
+    @abstractmethod
     def is_active(self) -> bool:
-        """
-        Clieck if a blueprint is active. It can be disabled with
-        'active: false' directive in the blueprint
+        logger.warning("`is_active` should be properly initialized!")
 
-        Returns:
-            bool Is blueprint active
-        """
-        if not self.valid:
-            return False
-
-        if "active" not in self.bp["blueprint"]:
-            return True
-
-        return self.bp["blueprint"]["active"]
-
+    @abstractmethod
     def is_valid(self) -> bool:
-        """
-        Is blueprint even valid?
+        logger.warning("`authenticate` should be properly initialized!")
 
-        Return
-            bool Validity of the blueprint as checked by __check_valid
-        """
-        return self.valid
-
+    @abstractmethod
     def set_config(self, conf: Config) -> None:
-        """
-        Set instance of config file. Usually it's set automatically
-        """
-        self.conf = conf
+        logger.warning("`authenticate` should be properly initialized!")
 
+    @abstractmethod
     def set_temp(self, tmp: str) -> None:
-        """
-        Set temporary folder for some operations
-        """
-        self.tmp_folder = tmp
+        logger.warning("`authenticate` should be properly initialized!")
 
+    @abstractmethod
     def get_name(self) -> str:
-        """
-        Get blueprint (file) name
+        logger.warning("`authenticate` should be properly initialized!")
 
-        Returns
-            str Blueprint filename with stripped paths and file extension
-        """
-        return self.name
-
+    @abstractmethod
     def get_description(self) -> str:
-        """
-        Get optional blueprint description
+        logger.warning("`authenticate` should be properly initialized!")
 
-        Returns
-            str Blueprint optional description or empty string if the blueprint isn't valid
-        """
-        if not self.valid or "description" not in self.bp["blueprint"]:
-            return ""
-
-        return self.bp["blueprint"]["description"].strip()
-
+    @abstractmethod
     def get_temp(self) -> str:
-        """
-        Get temporary folder if one is set or create a new one
+        logger.warning("`authenticate` should be properly initialized!")
 
-        Returns
-            str Temporary folder path
-        """
-        if self.tmp_folder == "":
-            self.tmp_folder = tempfile.mkdtemp()
-
-        return self.tmp_folder
-
+    @abstractmethod
     def get_connection_type(self, machine: str) -> str:
-        """
-        Get connection type from hosts
+        logger.warning("`get_connection_type` should be properly initialized!")
 
-        Returns
-            str Connection type (FTP,SFTP,WebDAV...)
-        """
-        conn = self.conf.get_machine(machine)
-        if "kind" not in conn:
-            return "invalid"
-
-        return conn["kind"].upper()
-
+    @abstractmethod
     def is_source_local(self) -> bool:
-        """
-        Checks if source machine is local
+        logger.warning("`is_source_local` should be properly initialized!")
 
-        Returns
-            bool
-        """
-        if "machine" not in self.bp["blueprint"]["deploy"]["source"]:
-            return False
-
-        machine: str = self.bp["blueprint"]["deploy"]["source"]["machine"]
-        data: dict[str, Any] = self.conf.get_machine(machine)
-
-        return data["local"]
-
+    @abstractmethod
     def get_source(self) -> dict[str, str]:
-        """
-        Get source folder
+        logger.warning("`get_source` should be properly initialized!")
 
-        Returns
-            str Source folder or empty string if the blueprint isn't valid
-        """
-        if not self.valid:
-            return {}
-
-        return self.bp["blueprint"]["deploy"]["source"]
-
+    @abstractmethod
     def get_destinatons(self) -> Destinations | list[Any]:
-        """
-        Get list of destinations
-
-        Returns
-            list List of destination or empty list if the blueprint isn't valid
-        """
-        if not self.valid:
-            return []
-
-        return Destinations(self.bp["blueprint"]["deploy"]["destinations"], self.conf)
+        logger.warning("`get_destinatons` should be properly initialized!")

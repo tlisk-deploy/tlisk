@@ -6,9 +6,9 @@ from threading import Thread
 from colorama import Fore, Style
 
 from libs import agents_registry
+from libs.blueprint.blueprint import Blueprint
 from libs.blueprint.destinations import Destinations
 
-from .blueprint.blueprint import Blueprint
 from .blueprints import Blueprints
 from .config import Config
 from .transport import Transport

@@ -5,13 +5,17 @@ from typing import Any, List
 import yaml
 from loguru import logger
 
+from exceptions.blueprintexceptions import BlueprintException, InvalidBlueprintException
+from libs.blueprint.download import Download
+
 from .blueprint.blueprint import Blueprint
+from .blueprint.deploy import Deploy
 from .blueprint.destinations import Destinations
 from .config import Config
 
 
 class Blueprints:
-    bps: List[Blueprint] = []
+    bps: list[Blueprint] = []
     conf: Config
 
     def __init__(self, conf: Config, names: list[str] = []) -> None:
@@ -33,18 +37,28 @@ class Blueprints:
                 try:
                     with open(blueprint) as bp:
                         data = yaml.safe_load(bp)
-                        self.bps.append(Blueprint(os.path.basename(blueprint), data, self.conf))
+                        self.bps.append(self.__resolve_blueprint_type(os.path.basename(blueprint), data))
                 except Exception as e:
                     logger.warning(f"You have an error in blueprint {blueprint}:\n{str(e)}")
-        else:
+        else:  # load single blueprint
             for bp_name in names:
                 blueprint = "".join([bp for bp in blueprints if os.path.splitext(os.path.basename(bp))[0] == bp_name])
                 if blueprint != "":
                     with open(blueprint) as bp:
                         data = yaml.safe_load(bp)
-                        self.bps.append(Blueprint(os.path.basename(blueprint), data, self.conf))
+                        self.bps.append(self.__resolve_blueprint_type(os.path.basename(blueprint), data))
                 else:
                     logger.error(f"`{bp_name}` is not in a list of valid blueprints!")
+
+    def __resolve_blueprint_type(self, name: str, data: dict[str, Any]):
+        if "blueprint" not in data:
+            raise BlueprintException(name)
+        if "deploy" in data["blueprint"]:
+            return Deploy(name, data, self.conf)
+        elif "download" in data["blueprint"]:
+            return Download(name, data, self.conf)
+        else:
+            raise InvalidBlueprintException(name)
 
     def list_all(self) -> dict[str, dict[str, str | bool | Destinations]]:
         """
@@ -58,6 +72,7 @@ class Blueprints:
             out[bp.get_name()] = {
                 "active": bp.is_active(),
                 "valid": bp.is_valid(),
+                "sources": bp.get_source(),
                 "description": bp.get_description(),
                 "destinations": bp.get_destinatons(),
             }
