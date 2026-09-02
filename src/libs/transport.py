@@ -1,5 +1,6 @@
 import os
 
+import pycurl
 from colorama import Fore, Style
 from loguru import logger
 
@@ -78,6 +79,39 @@ class Transport:
 
         self.source_files = source_files
 
+    def fetch_file(self, remote_file: str, destination_folder: str):
+        file_name = os.path.basename(remote_file)
+        output_path = os.path.join(destination_folder, file_name)
+
+        c = pycurl.Curl()
+
+        try:
+            with open(output_path, "wb") as output_file:
+                c.setopt(pycurl.URL, remote_file)
+                c.setopt(pycurl.WRITEDATA, output_file)
+                c.setopt(pycurl.FOLLOWLOCATION, True)  # Follow redirects
+                c.setopt(pycurl.FAILONERROR, True)  # Raise on HTTP errors
+                c.setopt(pycurl.USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:142.0) " + "Gecko/20100101 Firefox/142.0")
+
+                c.perform()
+
+            print(f"Downloaded to {output_path}")
+
+        finally:
+            c.close()
+
+    def download_files(self, dest: str):
+        src = self.bp.get_source()
+        if "download" in src and list(src["download"]) == []:
+            logger.warning("List of downloads is empty!")
+            return
+
+        for dl in list(src["download"]):
+            try:
+                self.fetch_file(dl, dest)
+            except Exception as e:
+                logger.warning(f"Unable to fetch {dl}: {str(e)}")
+
     def init_agent(self, auth_name: str, machine: str) -> Agent | None:
         """
         Instantiate protocol and authenticate remote machine
@@ -124,6 +158,7 @@ class Transport:
         try:
             if self.bp.is_source_local():
                 self.index_source_folder()
+
             for dest in self.bp.get_destinatons():
                 if dest.is_valid():
                     if not dest.is_local():
@@ -138,7 +173,8 @@ class Transport:
                         else:
                             logger.warning("Client has not been initiated! Skipping further processing!")
                     else:
-                        print(f"{dest.get_machine()}: local handling isn't implemented yet")
+                        if self.bp.is_source_downloader():
+                            self.download_files(dest.get_folder())
                 else:
                     print(
                         f"{dest.get_machine()}: {Fore.RED}Destination isn't valid! "

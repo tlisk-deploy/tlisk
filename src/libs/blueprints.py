@@ -5,11 +5,7 @@ from typing import Any, List
 import yaml
 from loguru import logger
 
-from exceptions.blueprintexceptions import BlueprintException, InvalidBlueprintException
-from libs.blueprint.download import Download
-
 from .blueprint.blueprint import Blueprint
-from .blueprint.deploy import Deploy
 from .blueprint.destinations import Destinations
 from .config import Config
 
@@ -37,7 +33,7 @@ class Blueprints:
                 try:
                     with open(blueprint) as bp:
                         data = yaml.safe_load(bp)
-                        self.bps.append(self.__resolve_blueprint_type(os.path.basename(blueprint), data))
+                        self.bps.append(Blueprint(os.path.basename(blueprint), data, self.conf))
                 except Exception as e:
                     logger.warning(f"You have an error in blueprint {blueprint}:\n{str(e)}")
         else:  # load single blueprint
@@ -46,19 +42,9 @@ class Blueprints:
                 if blueprint != "":
                     with open(blueprint) as bp:
                         data = yaml.safe_load(bp)
-                        self.bps.append(self.__resolve_blueprint_type(os.path.basename(blueprint), data))
+                        self.bps.append(Blueprint(os.path.basename(blueprint), data, self.conf))
                 else:
                     logger.error(f"`{bp_name}` is not in a list of valid blueprints!")
-
-    def __resolve_blueprint_type(self, name: str, data: dict[str, Any]):
-        if "blueprint" not in data:
-            raise BlueprintException(name)
-        if "deploy" in data["blueprint"]:
-            return Deploy(name, data, self.conf)
-        elif "download" in data["blueprint"]:
-            return Download(name, data, self.conf)
-        else:
-            raise InvalidBlueprintException(name)
 
     def list_all(self) -> dict[str, dict[str, str | bool | Destinations]]:
         """
