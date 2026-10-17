@@ -33,6 +33,7 @@ pre_commit==4.6.2
 prompt_toolkit==3.0.53
 pycodestyle==2.14.0
 pycparser==3.0
+pycurl==7.47.0
 pyflakes==3.4.0
 PyNaCl==1.6.2
 python-discovery==1.6.0

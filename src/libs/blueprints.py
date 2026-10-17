@@ -11,7 +11,7 @@ from .config import Config
 
 
 class Blueprints:
-    bps: List[Blueprint] = []
+    bps: list[Blueprint] = []
     conf: Config
 
     def __init__(self, conf: Config, names: list[str] = []) -> None:
@@ -36,7 +36,7 @@ class Blueprints:
                         self.bps.append(Blueprint(os.path.basename(blueprint), data, self.conf))
                 except Exception as e:
                     logger.warning(f"You have an error in blueprint {blueprint}:\n{str(e)}")
-        else:
+        else:  # load single blueprint
             for bp_name in names:
                 blueprint = "".join([bp for bp in blueprints if os.path.splitext(os.path.basename(bp))[0] == bp_name])
                 if blueprint != "":
@@ -58,7 +58,7 @@ class Blueprints:
             out[bp.get_name()] = {
                 "active": bp.is_active(),
                 "valid": bp.is_valid(),
-                "kind": bp.get_kind(),
+                "sources": bp.get_source(),
                 "description": bp.get_description(),
                 "destinations": bp.get_destinatons(),
             }

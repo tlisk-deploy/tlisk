@@ -141,9 +141,9 @@ class Config:
         Returns
             dict {local, {host, port, authentication}}
         """
-        if "machines" in self.conf and type(self.conf["machines"]) is dict:
-            if machine in self.conf["machines"]:
-                return self.conf["machines"][machine]
+
+        if "machines" in self.conf and type(self.conf["machines"]) is dict and machine in self.conf["machines"]:
+            return self.conf["machines"][machine]
 
         return {}
 
@@ -161,12 +161,12 @@ class Config:
                 if pwd.lower().startswith("{{") and pwd.endswith("}}"):  # special items
                     print(f"Gathering password for {machine}")
                     pwd_type = pwd.strip("{}").split(".")
-                    if (
-                        len(pwd_type) >= 2 and pwd_type[0].lower() == "$env"
-                    ):  # Password in environment. Password directive in yml is {$ENV.ENVIRONMENT_VARIABLE}
+                    if len(pwd_type) >= 2 and pwd_type[0].lower() == "$env":
+                        # Password in environment. Password directive in yml is {{$ENV.ENVIRONMENT_VARIABLE}}
                         pwd = os.environ[pwd_type[1]] if pwd_type[1] in os.environ else None
                         auth["password"] = pwd
-                    elif pwd_type[0].lower() == "$prompt":  # Prompt for password. Password directive is {$PROMPT}
+                    elif pwd_type[0].lower() == "$prompt":
+                        # Prompt for password. Password directive is {{$PROMPT}}
                         pwd = getpass.getpass() or None
                         auth["password"] = pwd
             return auth

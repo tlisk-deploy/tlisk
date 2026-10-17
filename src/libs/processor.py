@@ -1,16 +1,14 @@
 import sys
 import threading
 from argparse import Namespace
-from optparse import Values
 from threading import Thread
 
 from colorama import Fore, Style
-from loguru import logger
 
 from libs import agents_registry
+from libs.blueprint.blueprint import Blueprint
 from libs.blueprint.destinations import Destinations
 
-from .blueprint.blueprint import Blueprint
 from .blueprints import Blueprints
 from .config import Config
 from .transport import Transport
@@ -18,7 +16,7 @@ from .transport import Transport
 
 class Processor:
     blueprints: Blueprints
-    opts: Values
+    opts: Namespace
     conf: Config
 
     def __init__(self, conf: Config, opts: Namespace) -> None:
@@ -50,7 +48,6 @@ class Processor:
             is_active = is_active + Style.RESET_ALL
 
             print(f"{Style.BRIGHT}{Fore.YELLOW}{bp}: {is_valid} {Fore.WHITE} || {is_active}")
-            print(f"{Style.BRIGHT}{Fore.BLUE} Kind: " + str(bps[bp]["kind"]) if bps[bp]["kind"] != "" else "fallback")
             if bps[bp]["description"] != "":
                 description: str = str(bps[bp]["description"])
                 print(f"{Style.DIM}{Fore.WHITE} # {Fore.MAGENTA}{description}")
@@ -60,8 +57,9 @@ class Processor:
             for dest in dests:
                 is_destination_valid: str = bright_green + "Valid" if dest.is_valid() else dim_red + "Not valid"
                 is_destination_valid = is_destination_valid + Style.RESET_ALL
+                kind: str = dest.get_kind()
                 machine_name: str = str(dest.get_machine())
-                print(f"{Style.BRIGHT}{Fore.WHITE}  > {machine_name} | " + is_destination_valid)
+                print(f"{Style.BRIGHT}{Fore.WHITE}  > {machine_name} ({kind}) | " + is_destination_valid)
 
             print(Style.RESET_ALL)
 
@@ -81,33 +79,8 @@ class Processor:
         Execute seperate blueprint
         """
         if bp.is_active():
-            if bp.is_source_local():
-                try:
-                    tx = Transport(bp)
-                    for dest in bp.get_destinatons():
-                        if dest.is_valid():
-                            if not dest.is_local():
-                                tx.authenticate(dest.auth(), dest.get_machine())
-                                if tx.is_client_active():
-                                    tx.run_commands(dest.get_remote_commands("before"))
-                                    files_cp: bool = tx.copy_files(dest.get_folder(), dest.get_machine())
-                                    if not files_cp:
-                                        logger.warning("Error in copying files! Skipping further processing!")
-                                        continue
-                                    tx.run_commands(dest.get_remote_commands("after"))
-                                else:
-                                    logger.warning("Client has not been initiated! Skipping further processing!")
-                            else:
-                                print(f"{dest.get_machine()}: local handling isn't implemented yet")
-                        else:
-                            print(
-                                f"{dest.get_machine()}: {Fore.RED}Destination isn't valid! "
-                                + f"({dest.show_destination_error()}){Style.RESET_ALL}"
-                            )
-                except PermissionError as pe:
-                    logger.error(f"There was a permission error while running the blueprint: {pe}. Do you need to be root?")
-                except Exception as e:
-                    logger.error(f"There was an error executing the blueprint: {e}")
+            tx = Transport(bp)
+            tx.run()
 
     def run(self) -> None:
         """

@@ -1,4 +1,3 @@
-import getpass
 import os
 import tempfile
 from typing import Any
@@ -41,14 +40,6 @@ class Blueprint:
             logger.error(f"{self.name}: Blueprint is not wrapped in `blueprint` structure!")
             return
 
-        if "kind" not in self.bp["blueprint"]:
-            logger.error(f"{self.name}: Kind is missing from the blueprint!")
-            return
-
-        if self.bp["blueprint"]["kind"] not in ["sftp", "local"]:
-            logger.error(f"{self.name}: Invalid kind of transport specified in blueprint!")
-            return
-
         if "deploy" not in self.bp["blueprint"]:
             logger.error(f"{self.name}: Deploy is missing from the blueprint!")
             return
@@ -58,11 +49,11 @@ class Blueprint:
             logger.error(f"{self.name}: `source` configuration is missing from the `deploy` section!")
             return
 
-        if "folder" not in dep["source"] and "items" not in dep["source"]:
-            logger.error(f"{self.name}: `folder` or `items` not defined in `source`")
+        if "folder" not in dep["source"] and "items" not in dep["source"] and "download" not in dep["source"]:
+            logger.error(f"{self.name}: `folder`, `download` or `items` not defined in `source`")
             return
 
-        if "type" not in dep["source"]:
+        if "download" not in dep["source"] and "type" not in dep["source"]:
             logger.error(f"{self.name}: `type` is not defined in `source`")
             return
 
@@ -111,7 +102,7 @@ class Blueprint:
         if "active" not in self.bp["blueprint"]:
             return True
 
-        return self.bp["blueprint"]["active"]
+        return bool(self.bp["blueprint"]["active"])
 
     def is_valid(self) -> bool:
         """
@@ -155,22 +146,6 @@ class Blueprint:
 
         return self.bp["blueprint"]["description"].strip()
 
-    def get_kind(self) -> str:
-        """
-        Get kind of a blueprint. Current supported types:
-         - sftp
-
-        Returns:
-            bool Is blueprint active
-        """
-        if not self.valid:
-            return ""
-
-        if "kind" not in self.bp["blueprint"]:
-            return "sftp"
-
-        return self.bp["blueprint"]["kind"]
-
     def get_temp(self) -> str:
         """
         Get temporary folder if one is set or create a new one
@@ -183,6 +158,19 @@ class Blueprint:
 
         return self.tmp_folder
 
+    def get_connection_type(self, machine: str) -> str:
+        """
+        Get connection type from hosts
+
+        Returns
+            str Connection type (FTP,SFTP,WebDAV...)
+        """
+        conn = self.conf.get_machine(machine)
+        if "kind" not in conn:
+            return "invalid"
+
+        return conn["kind"].upper()
+
     def is_source_local(self) -> bool:
         """
         Checks if source machine is local
@@ -190,10 +178,16 @@ class Blueprint:
         Returns
             bool
         """
+        if "machine" not in self.bp["blueprint"]["deploy"]["source"]:
+            return False
+
         machine: str = self.bp["blueprint"]["deploy"]["source"]["machine"]
         data: dict[str, Any] = self.conf.get_machine(machine)
 
         return data["local"]
+
+    def is_source_downloader(self):
+        return "download" in self.bp["blueprint"]["deploy"]["source"]
 
     def get_source(self) -> dict[str, str]:
         """
@@ -218,15 +212,3 @@ class Blueprint:
             return []
 
         return Destinations(self.bp["blueprint"]["deploy"]["destinations"], self.conf)
-
-    def runas_user(self) -> str:
-        """
-        Get executing user
-
-        Returns
-            string username
-        """
-        if not self.valid:
-            return getpass.getuser()
-
-        return self.bp["blueprint"]["deploy"]["runas"]
